@@ -352,8 +352,8 @@
 
    <script>
        let secretNumber;
-       let guessesLeft = 8;
-       let rangeCluesLeft = 4;
+       let guessesLeft = 7;
+       let rangeCluesLeft = 3;
        let usedClues = new Set();
        let history = [];
        let noClueWarningShown = false;
@@ -363,8 +363,8 @@
 
        function startGame() {
            secretNumber = Math.floor(Math.random() * 100) + 1;
-           guessesLeft = 8;
-           rangeCluesLeft = 4;
+           guessesLeft = 7;
+           rangeCluesLeft = 3;
            usedClues.clear();
            history = [];
            noClueWarningShown = false;
