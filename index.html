@@ -8,6 +8,9 @@
 <body>
    <div id="game-container">
        <h1>🎯 Countle</h1>
+       <div id="daily-info" class="daily-info">
+           <span id="date-display"></span>
+       </div>
        <p class="subtitle">Guess the number between 1 and 100 in 7 tries! Use up to 3 Range clues.</p>
        
        <div class="game-status">
@@ -49,7 +52,10 @@
            <div id="history-content"></div>
        </div>
        
-       <button onclick="startGame()" class="new-game-btn">🔄 New Game</button>
+       <div id="game-complete" class="game-complete" style="display: none;">
+           <p id="completion-message"></p>
+           <p class="next-game-info">Come back tomorrow for a new challenge!</p>
+       </div>
    </div>
 
    <style>
@@ -83,9 +89,21 @@
        h1 {
            color: #4a5568;
            font-size: 2.5rem;
-           margin-bottom: 10px;
+           margin-bottom: 5px;
            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
            text-align: center;
+       }
+
+       .daily-info {
+           text-align: center;
+           margin-bottom: 15px;
+           padding: 8px 16px;
+           background: linear-gradient(135deg, #667eea, #764ba2);
+           color: white;
+           border-radius: 15px;
+           font-weight: bold;
+           font-size: 1.1rem;
+           box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
        }
 
        .subtitle {
@@ -287,24 +305,20 @@
            border-left-color: #48bb78;
        }
 
-       .new-game-btn {
-           background: linear-gradient(135deg, #9f7aea, #805ad5);
+       .game-complete {
+           text-align: center;
+           padding: 20px;
+           background: linear-gradient(135deg, #667eea, #764ba2);
            color: white;
-           border: none;
-           padding: 14px 32px;
-           border-radius: 12px;
-           font-size: 1.1rem;
-           font-weight: bold;
-           cursor: pointer;
-           transition: all 0.3s ease;
-           box-shadow: 0 4px 15px rgba(159, 122, 234, 0.3);
-           display: block;
-           margin: 0 auto;
+           border-radius: 15px;
+           margin-top: 20px;
+           box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
        }
 
-       .new-game-btn:hover {
-           transform: translateY(-2px);
-           box-shadow: 0 6px 20px rgba(159, 122, 234, 0.4);
+       .next-game-info {
+           margin-top: 10px;
+           font-size: 1.1rem;
+           opacity: 0.9;
        }
 
        .clue-select option:disabled {
@@ -357,32 +371,107 @@
        let usedClues = new Set();
        let history = [];
        let noClueWarningShown = false;
-       let guessCount = 0; // Track the actual guess number
+       let guessCount = 0;
+       let gameCompleted = false;
+       let todayDateString = '';
 
        const fibonacciNumbers = new Set([1, 2, 3, 5, 8, 13, 21, 34, 55, 89]);
 
-       function startGame() {
-           secretNumber = Math.floor(Math.random() * 100) + 1;
-           guessesLeft = 7;
-           rangeCluesLeft = 3;
-           usedClues.clear();
-           history = [];
-           noClueWarningShown = false;
-           guessCount = 0; // Reset guess counter
+       // SHA-256 implementation
+       async function sha256(message) {
+           const msgBuffer = new TextEncoder().encode(message);
+           const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+           const hashArray = Array.from(new Uint8Array(hashBuffer));
+           return hashArray;
+       }
+
+       // Generate daily number based on date
+       async function generateDailyNumber() {
+           const today = new Date();
+           const day = String(today.getDate()).padStart(2, '0');
+           const month = String(today.getMonth() + 1).padStart(2, '0');
+           const year = today.getFullYear();
            
-           document.getElementById('guess-input').value = '';
-           document.getElementById('guess-input').disabled = false;
-           document.getElementById('clue-select').selectedIndex = 0;
-           document.getElementById('clue-select').disabled = false;
-           document.querySelector('.guess-btn').disabled = false;
+           todayDateString = `${day}/${month}/${year}`;
+           const dateInput = `${day}${month}${year}`;
            
-           document.getElementById('message').textContent = 'Make your first guess! You have 7 guesses including 3 range clues.';
-           document.getElementById('message').className = 'message';
-           document.getElementById('history-content').innerHTML = '';
-           document.getElementById('guesses-counter').textContent = guessesLeft;
+           // Generate SHA-256 hash
+           const hashArray = await sha256(dateInput);
            
-           updateRangeDisplay();
-           updateClueOptions();
+           // Use first 4 bytes to generate number between 1-100
+           const first4Bytes = hashArray.slice(0, 4);
+           const number = (first4Bytes[0] << 24) | (first4Bytes[1] << 16) | (first4Bytes[2] << 8) | first4Bytes[3];
+           return Math.abs(number) % 100 + 1;
+       }
+
+       // Load game state from localStorage
+       function loadGameState() {
+           const saved = localStorage.getItem('countle-game-state');
+           if (saved) {
+               const state = JSON.parse(saved);
+               if (state.date === todayDateString) {
+                   // Load today's game state
+                   guessesLeft = state.guessesLeft;
+                   rangeCluesLeft = state.rangeCluesLeft;
+                   usedClues = new Set(state.usedClues);
+                   history = state.history;
+                   guessCount = state.guessCount;
+                   gameCompleted = state.gameCompleted;
+                   
+                   if (gameCompleted) {
+                       endGame(state.won, state.secretNumber);
+                   }
+                   
+                   return true;
+               }
+           }
+           return false;
+       }
+
+       // Save game state to localStorage
+       function saveGameState(won = false) {
+           const state = {
+               date: todayDateString,
+               guessesLeft: guessesLeft,
+               rangeCluesLeft: rangeCluesLeft,
+               usedClues: Array.from(usedClues),
+               history: history,
+               guessCount: guessCount,
+               gameCompleted: gameCompleted,
+               won: won,
+               secretNumber: secretNumber
+           };
+           localStorage.setItem('countle-game-state', JSON.stringify(state));
+       }
+
+       // Initialize game
+       async function initializeGame() {
+           secretNumber = await generateDailyNumber();
+           document.getElementById('date-display').textContent = `Daily Challenge - ${todayDateString}`;
+           
+           // Try to load saved state
+           if (!loadGameState()) {
+               // Fresh game
+               document.getElementById('message').textContent = 'Make your first guess! You have 7 guesses including 3 range clues.';
+               document.getElementById('message').className = 'message';
+           } else {
+               // Restored game
+               document.getElementById('guesses-counter').textContent = guessesLeft;
+               updateRangeDisplay();
+               updateClueOptions();
+               
+               // Restore history
+               const historyHTML = history.map(entry => {
+                   const entryClass = entry.includes('Range:') ? 'guess-entry range-entry' : 'guess-entry';
+                   return `<div class="${entryClass}">${entry}</div>`;
+               }).join('');
+               document.getElementById('history-content').innerHTML = historyHTML;
+               
+               if (!gameCompleted) {
+                   document.getElementById('message').textContent = 'Continue your game!';
+                   document.getElementById('message').className = 'message';
+               }
+           }
        }
 
        function updateRangeDisplay() {
@@ -466,7 +555,28 @@
            });
        }
 
+       function endGame(won, number) {
+           gameCompleted = true;
+           document.getElementById('guess-input').disabled = true;
+           document.getElementById('clue-select').disabled = true;
+           document.querySelector('.guess-btn').disabled = true;
+           
+           const gameCompleteDiv = document.getElementById('game-complete');
+           const completionMessage = document.getElementById('completion-message');
+           
+           if (won) {
+               completionMessage.textContent = `🎉 Congratulations! You found the number ${number} in ${guessCount} guesses!`;
+           } else {
+               completionMessage.textContent = `💥 Game Over! The number was ${number}. Better luck tomorrow!`;
+           }
+           
+           gameCompleteDiv.style.display = 'block';
+           saveGameState(won);
+       }
+
        function submitGuess() {
+           if (gameCompleted) return;
+           
            const guess = parseInt(document.getElementById('guess-input').value);
            const clueType = document.getElementById('clue-select').value;
 
@@ -508,7 +618,7 @@
 
            // Process the guess
            guessesLeft--;
-           guessCount++; // Increment the actual guess counter
+           guessCount++;
            if (clueType === 'range') {
                rangeCluesLeft--;
            } else if (clueType) {
@@ -519,15 +629,13 @@
            updateRangeDisplay();
 
            const messageEl = document.getElementById('message');
-           let historyEntry = `Guess ${guessCount}: ${guess}`; // Use the actual guess counter
+           let historyEntry = `Guess ${guessCount}: ${guess}`;
            
            if (guess === secretNumber) {
                messageEl.textContent = `🎉 Congratulations! You guessed the number ${secretNumber} correctly!`;
                messageEl.className = 'message success';
-               document.getElementById('guess-input').disabled = true;
-               document.getElementById('clue-select').disabled = true;
-               document.querySelector('.guess-btn').disabled = true;
                historyEntry += ` | ✅ CORRECT!`;
+               endGame(true, secretNumber);
            } else {
                let clueResult = '';
                let direction = '';
@@ -544,13 +652,10 @@
                    historyEntry += ` | No clue used`;
                }
                
-               // Game over condition: only end game if guessesLeft is 0 AND it's a wrong guess
                if (guessesLeft === 0) {
                    messageEl.textContent = `💥 Game Over! The number was ${secretNumber}.`;
                    messageEl.className = 'message error';
-                   document.getElementById('guess-input').disabled = true;
-                   document.getElementById('clue-select').disabled = true;
-                   document.querySelector('.guess-btn').disabled = true;
+                   endGame(false, secretNumber);
                } else {
                    messageEl.textContent = clueResult;
                    messageEl.className = 'message';
@@ -558,11 +663,16 @@
            }
 
            // Add to history
+           history.unshift(historyEntry);
            const entryClass = clueType === 'range' ? 'guess-entry range-entry' : 'guess-entry';
-           history.unshift(`<div class="${entryClass}">${historyEntry}</div>`);
-           document.getElementById('history-content').innerHTML = history.join('');
+           const historyHTML = history.map(entry => {
+               const entryClass = entry.includes('Range:') ? 'guess-entry range-entry' : 'guess-entry';
+               return `<div class="${entryClass}">${entry}</div>`;
+           }).join('');
+           document.getElementById('history-content').innerHTML = historyHTML;
            
            updateClueOptions();
+           saveGameState();
            
            // Clear inputs for next guess
            document.getElementById('guess-input').value = '';
@@ -576,10 +686,10 @@
                    submitGuess();
                }
            });
+           
+           // Initialize the game
+           initializeGame();
        });
-
-       // Start the game on page load
-       startGame();
    </script>
 </body>
 </html>
