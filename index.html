@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google-adsense-account" content="ca-pub-4684427277422923">
+    <title>Countle</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <h1>🎯 Countle</h1>
+        <p class="subtitle">Guess the number between 1 and 100 in 6 tries!</p>
+        
+        <div class="game-status">
+            <div class="guesses-left">
+                <span class="label">Guesses Left:</span>
+                <span id="guesses-counter" class="counter">6</span>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <input type="number" id="guess-input" min="1" max="100" placeholder="Enter your guess" class="guess-input">
+            <select id="clue-select" class="clue-select">
+                <option value="" disabled selected>Choose a clue</option>
+                <option value="parity">Parity (even or odd)</option>
+                <option value="div3">Divisible by 3</option>
+                <option value="div5">Divisible by 5</option>
+                <option value="prime">Is a prime number</option>
+                <option value="square">Is a perfect square</option>
+                <option value="tens">Tens digit parity</option>
+            </select>
+            <button onclick="submitGuess()" class="guess-btn">🎲 Guess</button>
+        </div>
+
+        <div id="message" class="message"></div>
+        
+        <div id="history" class="history-section">
+            <h3 class="history-title">Previous Guesses</h3>
+            <div id="history-content"></div>
+        </div>
+        
+        <button onclick="startGame()" class="new-game-btn">🔄 New Game</button>
+    </div>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #game-container {
+            max-width: 650px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        h1 {
+            color: #4a5568;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .subtitle {
+            color: #718096;
+            font-size: 1.1rem;
+            margin-bottom: 25px;
+        }
+
+        .game-status {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 25px;
+        }
+
+        .guesses-left {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(238, 90, 82, 0.3);
+        }
+
+        .label {
+            margin-right: 10px;
+        }
+
+        .counter {
+            font-size: 1.2rem;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+
+        .input-section {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .guess-input, .clue-select {
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .guess-input {
+            width: 150px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .clue-select {
+            min-width: 200px;
+            cursor: pointer;
+        }
+
+        .guess-input:focus, .clue-select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .guess-btn {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(72, 187, 120, 0.3);
+        }
+
+        .guess-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(72, 187, 120, 0.4);
+        }
+
+        .guess-btn:active {
+            transform: translateY(0);
+        }
+
+        .message {
+            background: white;
+            color: #4a5568;
+            padding: 15px 20px;
+            border: 2px solid #4299e1;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            font-weight: 500;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .message.success {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+            box-shadow: 0 4px 15px rgba(72, 187, 120, 0.3);
+        }
+
+        .message.error {
+            background: linear-gradient(135deg, #f56565, #e53e3e);
+            color: white;
+            box-shadow: 0 4px 15px rgba(245, 101, 101, 0.3);
+        }
+
+        .history-section {
+            margin-bottom: 25px;
+        }
+
+        .history-title {
+            color: #4a5568;
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        #history-content {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .guess-entry {
+            background: linear-gradient(135deg, #f7fafc, #edf2f7);
+            margin: 8px 0;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            font-size: 0.95rem;
+            color: #4a5568;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        .guess-entry:hover {
+            transform: translateX(2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .new-game-btn {
+            background: linear-gradient(135deg, #9f7aea, #805ad5);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(159, 122, 234, 0.3);
+        }
+
+        .new-game-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(159, 122, 234, 0.4);
+        }
+
+        .clue-select option:disabled {
+            color: #a0aec0;
+            background: #f7fafc;
+        }
+
+        @media (max-width: 600px) {
+            .input-section {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .guess-input, .clue-select {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+
+        /* Scrollbar styling */
+        #history-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #history-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        #history-content::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        #history-content::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
+
+    <script>
+        let secretNumber;
+        let guessesLeft = 6;
+        let usedClues = new Set();
+        let history = [];
+
+        function startGame() {
+            secretNumber = Math.floor(Math.random() * 100) + 1;
+            guessesLeft = 6;
+            usedClues.clear();
+            history = [];
+            noClueWarningShown = false;
+            document.getElementById('guess-input').value = '';
+            document.getElementById('guess-input').disabled = false;
+            document.getElementById('clue-select').selectedIndex = 0;
+            document.getElementById('clue-select').disabled = false;
+            document.getElementById('message').textContent = 'Make your first guess!';
+            document.getElementById('message').className = 'message';
+            document.getElementById('history-content').innerHTML = '';
+            document.getElementById('guesses-counter').textContent = guessesLeft;
+            updateClueOptions();
+        }
+
+        function isPrime(n) {
+            if (n < 2) return false;
+            for (let i = 2; i <= Math.sqrt(n); i++) {
+                if (n % i === 0) return false;
+            }
+            return true;
+        }
+
+        function isPerfectSquare(n) {
+            let root = Math.sqrt(n);
+            return root === Math.floor(root);
+        }
+
+        function getTensDigit(n) {
+            return Math.floor(n / 10);
+        }
+
+        function getClue(number, clueType) {
+            switch (clueType) {
+                case 'parity': return `It is ${number % 2 === 0 ? 'even' : 'odd'}.`;
+                case 'div3': return `It is ${number % 3 === 0 ? '' : 'not '}divisible by 3.`;
+                case 'div5': return `It is ${number % 5 === 0 ? '' : 'not '}divisible by 5.`;
+                case 'prime': return `It is ${isPrime(number) ? '' : 'not '}a prime number.`;
+                case 'square': return `It is ${isPerfectSquare(number) ? '' : 'not '}a perfect square.`;
+                case 'tens': return `Its tens digit is ${getTensDigit(number) % 2 === 0 ? 'even' : 'odd'}.`;
+                default: return '';
+            }
+        }
+
+        function getClueDisplayName(clueType) {
+            switch (clueType) {
+                case 'parity': return 'Parity (even or odd)';
+                case 'div3': return 'Divisible by 3';
+                case 'div5': return 'Divisible by 5';
+                case 'prime': return 'Is a prime number';
+                case 'square': return 'Is a perfect square';
+                case 'tens': return 'Tens digit parity';
+                default: return '';
+            }
+        }
+
+        function getSimplifiedResult(guess, secretNumber, clueType) {
+            const direction = guess < secretNumber ? 'higher' : 'lower';
+            let clueResult = '';
+            
+            if (clueType) {
+                switch (clueType) {
+                    case 'parity': 
+                        clueResult = `It is ${secretNumber % 2 === 0 ? 'even' : 'odd'}.`;
+                        break;
+                    case 'div3': 
+                        clueResult = `${secretNumber % 3 === 0 ? 'divisible' : 'not divisible'} by 3.`;
+                        break;
+                    case 'div5': 
+                        clueResult = `${secretNumber % 5 === 0 ? 'divisible' : 'not divisible'} by 5.`;
+                        break;
+                    case 'prime': 
+                        clueResult = `${isPrime(secretNumber) ? 'a prime' : 'not a prime'} number.`;
+                        break;
+                    case 'square': 
+                        clueResult = `${isPerfectSquare(secretNumber) ? 'a perfect' : 'not a perfect'} square.`;
+                        break;
+                    case 'tens': 
+                        clueResult = `tens digit is ${getTensDigit(secretNumber) % 2 === 0 ? 'even' : 'odd'}.`;
+                        break;
+                }
+                return `${direction} than ${guess}. ${clueResult}`;
+            } else {
+                return `${direction} than ${guess}. (No clue used)`;
+            }
+        }
+
+        function updateClueOptions() {
+            const select = document.getElementById('clue-select');
+            Array.from(select.options).forEach(option => {
+                if (option.value && usedClues.has(option.value)) {
+                    option.disabled = true;
+                } else if (option.value) {
+                    option.disabled = false;
+                }
+            });
+        }
+
+        let noClueWarningShown = false;
+
+        function submitGuess() {
+            const guess = parseInt(document.getElementById('guess-input').value);
+            const clueType = document.getElementById('clue-select').value;
+
+            if (!guess || guess < 1 || guess > 100) {
+                const messageEl = document.getElementById('message');
+                messageEl.textContent = 'Please enter a number between 1 and 100.';
+                messageEl.className = 'message error';
+                return;
+            }
+
+            // If no clue is selected, show warning first time, then allow continuation
+            if (!clueType) {
+                if (!noClueWarningShown) {
+                    const messageEl = document.getElementById('message');
+                    messageEl.textContent = 'No clue selected. Press "Guess" again to continue without a clue.';
+                    messageEl.className = 'message error';
+                    noClueWarningShown = true;
+                    return;
+                }
+                // Reset warning for next guess
+                noClueWarningShown = false;
+            } else {
+                // Reset warning when a clue is selected
+                noClueWarningShown = false;
+                
+                // If clue is already used
+                if (usedClues.has(clueType)) {
+                    const messageEl = document.getElementById('message');
+                    messageEl.textContent = 'This clue has already been used. Please select an available clue.';
+                    messageEl.className = 'message error';
+                    return;
+                }
+            }
+
+            guessesLeft--;
+            if (clueType) {
+                usedClues.add(clueType);
+            }
+            document.getElementById('guesses-counter').textContent = guessesLeft;
+
+            const messageEl = document.getElementById('message');
+            
+            if (guess === secretNumber) {
+                messageEl.textContent = `🎉 Congratulations! You guessed the number ${secretNumber} correctly!`;
+                messageEl.className = 'message success';
+                document.getElementById('guess-input').disabled = true;
+                document.getElementById('clue-select').disabled = true;
+            } else {
+                const direction = guess < secretNumber ? 'higher' : 'lower';
+                const clue = clueType ? getClue(secretNumber, clueType) : '';
+                const currentMessage = clueType ? 
+                    `The number is ${direction} than ${guess}. ${clue}` :
+                    `The number is ${direction} than ${guess}.`;
+                
+                // Add to history with simplified format
+                const historyEntry = `Guess: ${guess} | Result: ${getSimplifiedResult(guess, secretNumber, clueType)}`;
+                history.unshift(historyEntry);
+                
+                if (guessesLeft === 0) {
+                    messageEl.textContent = `💥 Game Over! The number was ${secretNumber}.`;
+                    messageEl.className = 'message error';
+                    document.getElementById('guess-input').disabled = true;
+                    document.getElementById('clue-select').disabled = true;
+                } else {
+                    messageEl.textContent = currentMessage;
+                    messageEl.className = 'message';
+                }
+            }
+
+            // Update history display
+            document.getElementById('history-content').innerHTML = history.map(h => `<div class="guess-entry">${h}</div>`).join('');
+            updateClueOptions();
+            
+            // Clear inputs for next guess
+            document.getElementById('guess-input').value = '';
+            document.getElementById('clue-select').selectedIndex = 0;
+        }
+
+        // Allow Enter key to submit guess
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('guess-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    submitGuess();
+                }
+            });
+        });
+
+        // Start the game on page load
+        startGame();
+    </script>
+</body>
+</html>
