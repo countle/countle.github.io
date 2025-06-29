@@ -8,12 +8,12 @@
 <body>
    <div id="game-container">
        <h1>🎯 Countle</h1>
-       <p class="subtitle">Guess the number between 1 and 100 in 8 tries! Use up to 4 Range clues.</p>
+       <p class="subtitle">Guess the number between 1 and 100 in 7 tries! Use up to 3 Range clues.</p>
        
        <div class="game-status">
            <div class="status-item">
                <span class="label">Guesses Left:</span>
-               <span id="guesses-counter" class="counter">8</span>
+               <span id="guesses-counter" class="counter">7</span>
            </div>
            <div class="status-item range-status">
                <span class="label">Range Clues:</span>
@@ -21,7 +21,6 @@
                    <span id="range-dot-1" class="range-dot available">●</span>
                    <span id="range-dot-2" class="range-dot available">●</span>
                    <span id="range-dot-3" class="range-dot available">●</span>
-                   <span id="range-dot-4" class="range-dot available">●</span>
                </div>
            </div>
        </div>
@@ -377,7 +376,7 @@
            document.getElementById('clue-select').disabled = false;
            document.querySelector('.guess-btn').disabled = false;
            
-           document.getElementById('message').textContent = 'Make your first guess! You have 8 guesses including 4 range clues.';
+           document.getElementById('message').textContent = 'Make your first guess! You have 7 guesses including 3 range clues.';
            document.getElementById('message').className = 'message';
            document.getElementById('history-content').innerHTML = '';
            document.getElementById('guesses-counter').textContent = guessesLeft;
